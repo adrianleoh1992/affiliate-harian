@@ -204,9 +204,13 @@ create policy "hapus akun" on public.accounts
   for delete using (public.workspace_role(workspace_id) = 'owner');
 
 -- data harian: baca anggota, tulis editor/owner, hapus owner
+-- set local client_min_messages menekan NOTICE "policy does not exist" yang
+-- muncul saat pertama kali dijalankan; tanpa itu output SQL Editor penuh
+-- peringatan yang tidak berarti apa-apa dan menutupi hasil verifikasi.
 do $$
 declare t text;
 begin
+  set local client_min_messages = warning;
   foreach t in array array['daily_affiliate','daily_ads','daily_clicks','uploads','row_hashes']
   loop
     execute format('drop policy if exists "baca data" on public.%I', t);
