@@ -5,6 +5,12 @@
 .acctrow .field{margin:0}
 .acctrow .btn{min-height:38px;min-width:38px;justify-content:center}
 
+/* Two deployments of the same codebase are easy to confuse in a browser tab,
+   so this build names itself in the header. */
+.build-badge{display:inline-block;vertical-align:middle;margin-left:7px;
+  font-size:9.5px;font-weight:800;letter-spacing:.7px;padding:3px 7px;
+  border-radius:20px;background:#0f766e;color:#fff;text-transform:uppercase}
+
 /* Ingest plan — shown BEFORE writing, so the user approves what changes */
 .ingest-box{margin-top:14px;border:1px solid var(--info);background:var(--info-soft);
   border-radius:11px;padding:14px}
