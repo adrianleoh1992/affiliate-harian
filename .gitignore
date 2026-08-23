@@ -1,0 +1,8 @@
+*.csv
+*.xlsx
+AffiliateCommissionReport_*
+WebsiteClickReport*
+AW-*-Ads-*
+node_modules/
+package-lock.json
+.DS_Store
