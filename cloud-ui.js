@@ -192,7 +192,20 @@
     if (t.dataset.tab === 'cloud') render();
   }));
 
-  // Sesi bisa pulih dari magic link saat halaman dibuka kembali.
-  if (CloudSync.configured()) setTimeout(render, 400);
+  // Sesi bisa pulih dari magic link saat halaman dibuka kembali, tapi jangan
+  // mengunduh SDK Supabase hanya untuk memeriksanya — itu membebani setiap
+  // pemuatan halaman bagi pengguna yang tidak sedang memakai cloud. Token
+  // sesi tersimpan di localStorage, jadi keberadaannya bisa dicek murah.
+  const hasSession = () => {
+    try {
+      return Object.keys(localStorage).some(k =>
+        k === 'aharian_sb_auth' || k.startsWith('sb-'));
+    } catch (e) { return false; }
+  };
+  // Kembali dari magic link membawa token di fragment URL.
+  const returningFromLink = /[#&](access_token|error_description)=/.test(location.hash);
+  if (CloudSync.configured() && (hasSession() || returningFromLink)) {
+    setTimeout(render, 400);
+  }
   window.__renderCloud = render;
 })();

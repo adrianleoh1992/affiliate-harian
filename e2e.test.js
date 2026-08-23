@@ -144,7 +144,7 @@ const check = (label, ok, detail) => {
   check('tanpa overflow horizontal', !mob.overflow);
   check('target sentuh >= 44px', mob.pick >= 44, mob.pick + 'px');
 
-  console.log('\n=== CLOUD (belum dikonfigurasi) ===');
+  console.log('\n=== CLOUD ===');
   await p.setViewportSize({ width: 1500, height: 1000 });
   await p.waitForTimeout(700);
   // The tab strip scrolls horizontally on narrow layouts, so bring the tab
@@ -164,8 +164,11 @@ const check = (label, ok, detail) => {
     };
   });
   check('panel cloud tampil', cloud.rendered);
-  check('formulir setup muncul', cloud.hasForm);
-  check('SDK tidak dimuat sebelum dipakai', !cloud.sdkLoaded);
+  // Kredensial tertanam di supabase-defaults.js, jadi form setup justru tidak
+  // boleh muncul — rekan tim tidak perlu menempel apa pun untuk mulai.
+  check('form setup tidak muncul (kredensial tertanam)', !cloud.hasForm);
+  // SDK menyusul setelah tab dibuka; yang penting halaman awal tetap ringan.
+  check('SDK dimuat hanya saat tab cloud dibuka', cloud.sdkLoaded);
 
   // Data lokal harus tetap utuh setelah membuka tab cloud.
   const stillThere = await p.evaluate(async () => {

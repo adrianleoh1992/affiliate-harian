@@ -18,10 +18,16 @@ const CloudSync = (() => {
   const LS_URL = 'aharian_sb_url', LS_KEY = 'aharian_sb_key', LS_WS = 'aharian_ws';
   let sb = null;
 
-  const cfg = () => ({
-    url: (localStorage.getItem(LS_URL) || '').trim().replace(/\/+$/, ''),
-    key: (localStorage.getItem(LS_KEY) || '').trim(),
-  });
+  const cfg = () => {
+    // localStorage menang supaya pengguna bisa menunjuk ke project lain,
+    // tapi tanpa itu pakai bawaan repo — rekan tim tidak perlu menempel
+    // kredensial apa pun untuk mulai.
+    const d = (typeof window !== 'undefined' && window.SUPABASE_DEFAULTS) || {};
+    return {
+      url: ((localStorage.getItem(LS_URL) || d.url || '')).trim().replace(/\/+$/, ''),
+      key: ((localStorage.getItem(LS_KEY) || d.anonKey || '')).trim(),
+    };
+  };
   const configured = () => { const c = cfg(); return !!(c.url && c.key); };
   const activeWorkspace = () => {
     try { return JSON.parse(localStorage.getItem(LS_WS) || 'null'); } catch (e) { return null; }
@@ -40,6 +46,9 @@ const CloudSync = (() => {
     [LS_URL, LS_KEY, LS_WS].forEach(k => localStorage.removeItem(k));
     sb = null;
   }
+  // Benar kalau koneksi berasal dari repo, bukan dipilih pengguna. Dipakai UI
+  // untuk tidak menawarkan "Ganti Koneksi" seolah pengguna pernah mengaturnya.
+  const usingDefaults = () => !localStorage.getItem(LS_URL);
 
   /* SDK dimuat hanya saat dipakai, supaya halaman tetap ringan bagi yang
      tidak mengaktifkan cloud. */
@@ -335,7 +344,7 @@ const CloudSync = (() => {
   }
 
   return {
-    configured, saveConfig, clearConfig, cfg,
+    configured, saveConfig, clearConfig, cfg, usingDefaults,
     currentUser, signIn, signOut,
     myWorkspaces, createWorkspace, joinWorkspace, members,
     activeWorkspace, setActiveWorkspace,

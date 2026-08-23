@@ -27,6 +27,9 @@ def call(method, path, body=None, token=None):
     req = urllib.request.Request(url, data=data, method=method)
     req.add_header("Authorization", "Bearer " + (token or PAT))
     req.add_header("Content-Type", "application/json")
+    # Tanpa User-Agent yang wajar, Cloudflare di depan api.supabase.com
+    # menolak dengan error 1010 dan itu terlihat seperti token tidak valid.
+    req.add_header("User-Agent", "affiliate-harian-setup/1.0")
     try:
         with urllib.request.urlopen(req, timeout=120) as r:
             raw = r.read().decode()
