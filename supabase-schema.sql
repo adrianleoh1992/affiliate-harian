@@ -13,6 +13,12 @@
 -- bukan auth.uid() saja. Dua orang di workspace yang sama melihat data yang
 -- sama.
 
+-- ── Extension ─────────────────────────────────────────────────────────────
+-- gen_random_bytes() untuk kode undangan berasal dari pgcrypto. Supabase
+-- biasanya sudah mengaktifkannya, tapi jangan diandalkan: project baru bisa
+-- gagal di baris pertama tanpa ini.
+create extension if not exists pgcrypto;
+
 -- ── Workspace & keanggotaan ────────────────────────────────────────────────
 create table if not exists public.workspaces (
   id          uuid primary key default gen_random_uuid(),
@@ -221,7 +227,13 @@ end $$;
 -- ── Rollup untuk query silang antar akun ──────────────────────────────────
 -- "total semua akun bulan ini" cukup SELECT dari view ini, tanpa membawa
 -- ratusan MB ke browser.
-create or replace view public.v_account_monthly as
+--
+-- security_invoker WAJIB. Tanpa itu view berjalan sebagai pemiliknya
+-- (postgres), yang melewati RLS sepenuhnya — anggota satu workspace akan
+-- melihat angka workspace lain lewat view meski tabelnya terlindungi.
+-- Ini terbukti bocor saat diuji sebelum opsi ini ditambahkan.
+create or replace view public.v_account_monthly
+with (security_invoker = true) as
 select
   workspace_id,
   account_id,
@@ -235,7 +247,8 @@ select
 from public.daily_affiliate
 group by 1, 2, 3;
 
-create or replace view public.v_workspace_monthly as
+create or replace view public.v_workspace_monthly
+with (security_invoker = true) as
 select
   workspace_id,
   date_trunc('month', date)::date as month,
