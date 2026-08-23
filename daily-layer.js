@@ -360,6 +360,13 @@
     try {
       STORE = await DailyStore.open();
       window.__dailyStore = STORE;
+      // Lapisan cloud perlu tahu akun mana yang aktif dan cara memuat ulang
+      // daftar akun setelah menarik data dari cloud.
+      window.__activeAccount = () => ACCT;
+      window.__refreshAccounts = async () => {
+        await refreshAccounts(ACCT && ACCT.id);
+        await renderStored(); await renderUploads();
+      };
       await refreshAccounts();
       await renderUploads();
     } catch (e) {

@@ -6,3 +6,10 @@ AW-*-Ads-*
 node_modules/
 package-lock.json
 .DS_Store
+
+# Kredensial Supabase tidak pernah masuk repo — dikonfigurasi lewat UI,
+# disimpan di localStorage browser masing-masing.
+.env
+.env.*
+supabase-config.js
+.supabase/

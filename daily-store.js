@@ -243,6 +243,30 @@ const DailyStore = (() => {
       };
     }
 
+    /* Restore the dedup memory pulled from the cloud. Without this, a device
+       that syncs down would treat every previously-ingested file as new and
+       re-add rows that already exist. */
+    async restoreDedup(accountId, uploads, hashes) {
+      const tx = this.db.transaction(['uploads', 'rowhashes'], 'readwrite');
+      const up = tx.objectStore('uploads'), rh = tx.objectStore('rowhashes');
+      for (const u of uploads || []) {
+        // The unique index rejects repeats; that is the intent, so swallow it.
+        try {
+          await rq(up.add({
+            account_id: accountId, kind: u.kind, file_hash: u.file_hash,
+            file_name: u.file_name || '', rows: u.rows || 0,
+            added: u.added || 0, updated: u.updated || 0, duplicates: u.duplicates || 0,
+            period_start: u.period_start || null, period_end: u.period_end || null,
+            uploaded_at: u.uploaded_at || new Date().toISOString(),
+          }));
+        } catch (e) {}
+      }
+      for (const h of hashes || []) {
+        try { await rq(rh.add({ account_id: accountId, kind: h.kind, hash: h.hash })); } catch (e) {}
+      }
+      await done(tx);
+    }
+
     async estimate() {
       if (!navigator.storage || !navigator.storage.estimate) return null;
       const e = await navigator.storage.estimate();

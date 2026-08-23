@@ -62,7 +62,7 @@ const check = (label, ok, detail) => {
     rows: document.querySelectorAll('#tblMain tbody tr').length,
     actions: document.querySelectorAll('.action-card').length,
   }));
-  check('10 tab', ui.tabs === 10, ui.tabs + ' tab');
+  check('11 tab (8 dashboard + Data Tersimpan + Unggahan + Cloud)', ui.tabs === 11, ui.tabs + ' tab');
   check('8 KPI', ui.kpis === 8, ui.kpis + ' KPI');
   check('13 kolom tabel vonis', ui.cols === 13, ui.cols + ' kolom');
   check('kartu aksi tampil', ui.actions === 4, ui.actions + ' kartu');
@@ -143,6 +143,36 @@ const check = (label, ok, detail) => {
   }));
   check('tanpa overflow horizontal', !mob.overflow);
   check('target sentuh >= 44px', mob.pick >= 44, mob.pick + 'px');
+
+  console.log('\n=== CLOUD (belum dikonfigurasi) ===');
+  await p.setViewportSize({ width: 1500, height: 1000 });
+  await p.waitForTimeout(700);
+  // The tab strip scrolls horizontally on narrow layouts, so bring the tab
+  // into view rather than assuming it sits where it did at desktop width.
+  await p.evaluate(() => {
+    const t = document.querySelector('[data-tab="cloud"]');
+    if (t) { t.scrollIntoView({ block: 'center' }); t.click(); }
+  });
+  await p.waitForTimeout(1100);
+  const cloud = await p.evaluate(() => {
+    const el = document.getElementById('cloudPanel');
+    return {
+      rendered: !!el && el.innerHTML.trim().length > 0,
+      hasForm: !!document.getElementById('sbUrl'),
+      // SDK Supabase tidak boleh dimuat sebelum pengguna mengaktifkan cloud.
+      sdkLoaded: !!window.supabase,
+    };
+  });
+  check('panel cloud tampil', cloud.rendered);
+  check('formulir setup muncul', cloud.hasForm);
+  check('SDK tidak dimuat sebelum dipakai', !cloud.sdkLoaded);
+
+  // Data lokal harus tetap utuh setelah membuka tab cloud.
+  const stillThere = await p.evaluate(async () => {
+    const a = (await window.__dailyStore.listAccounts('shopee'))[0];
+    return (await window.__dailyStore.range(a.id, 'affiliate')).length;
+  });
+  check('data lokal tidak terganggu', stillThere > 0, stillThere + ' baris');
 
   const real = errs.filter(e => !/favicon/i.test(e));
   console.log('\n=== CONSOLE ===');

@@ -155,12 +155,38 @@ mobile 390px                      tanpa overflow, target sentuh 44px
 console error                     0
 ```
 
+## Sinkronisasi tim (opsional)
+
+Secara bawaan data tersimpan hanya di browser masing-masing. Untuk berbagi dengan tim
+dan membuka di perangkat lain, hubungkan ke Supabase — panduan lengkap di
+[SUPABASE.md](SUPABASE.md).
+
+Model **workspace**: data milik organisasi, bukan per orang. Anggota workspace yang
+sama melihat data yang sama, dengan peran `owner` / `editor` / `viewer`. Row Level
+Security di database yang menegakkan batas itu, bukan kode frontend — jadi bug di UI
+tidak bisa membocorkan data ke workspace lain.
+
+Hash file dan hash baris ikut tersinkron. Tanpa itu, rekan tim yang mengunggah file
+yang sama di perangkat lain akan dianggap mengunggah file baru, dan komisi akan
+menggandakan.
+
+IndexedDB tetap sumber kebenaran untuk membaca, jadi aplikasi tetap cepat dan tetap
+bisa dipakai saat Supabase tidak tersedia.
+
+> **Catatan free tier:** project Supabase gratis berhenti otomatis setelah 7 hari
+> tanpa aktivitas, dan tidak punya backup. Workflow `.github/workflows/keepalive.yml`
+> mengatasi yang pertama; untuk yang kedua, Pro ($25/bulan) memberi backup harian.
+
 ## Privasi
 
-Data transaksi tidak pernah meninggalkan browser. Tidak ada backend, tidak ada analytics.
-Semua tersimpan di IndexedDB perangkat Anda, dan bisa diekspor ke JSON kapan saja.
+Yang dikirim ke cloud hanya **agregat harian**: tanggal, tag, komisi, jumlah pesanan,
+biaya iklan. Nomor pesanan, nama produk, nama toko, dan seluruh baris CSV mentah tidak
+pernah meninggalkan browser.
 
-File CSV di-ignore oleh git supaya data klien tidak ikut ter-commit.
+Tanpa Supabase, tidak ada apa pun yang keluar dari perangkat: tidak ada backend, tidak
+ada analytics. Semua di IndexedDB, bisa diekspor ke JSON kapan saja.
+
+File CSV dan kredensial di-ignore oleh git supaya data klien tidak ikut ter-commit.
 
 ---
 

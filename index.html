@@ -121,6 +121,7 @@
       <button class="tab" data-tab="perkembangan">Perkembangan</button>
       <button class="tab" data-tab="tersimpan">Data Tersimpan</button>
       <button class="tab" data-tab="unggahan">Unggahan</button>
+      <button class="tab" data-tab="cloud">Cloud</button>
       <button class="tab" data-tab="peluang">Peluang</button>
       <button class="tab" data-tab="rincian">Rincian</button>
       <button class="tab" data-tab="matching">Matching</button>
@@ -261,6 +262,14 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="cloud">
+      <div class="card">
+        <div class="card-head"><h2>Sinkronisasi Tim</h2>
+          <span class="sub">Data dibagi dalam workspace — anggota melihat update yang sama</span></div>
+        <div id="cloudPanel"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="peluang">
       <div class="card">
         <div class="card-head"><h2>Kandidat Iklan dari Organik</h2>
@@ -365,5 +374,7 @@
 <script src="daily-store.js"></script>
 <script src="app.js"></script>
 <script src="daily-layer.js"></script>
+<script src="cloud-sync.js"></script>
+<script src="cloud-ui.js"></script>
 </body>
 </html>
