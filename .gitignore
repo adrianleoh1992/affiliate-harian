@@ -13,3 +13,6 @@ package-lock.json
 .env.*
 supabase-config.js
 .supabase/
+
+# Kredensial hasil setup otomatis — jangan pernah ter-commit
+.supabase-creds.json
