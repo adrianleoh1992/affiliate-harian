@@ -119,13 +119,18 @@ const DailyAgg = (() => {
       const date = day(r['Reporting starts']);
       if (!isDate(date)) continue;
       const unit = (r['Ad name'] || '').trim() || '(tanpa nama)';
+      // Campaign name ikut disimpan karena dua hal bergantung padanya:
+      // mencocokkan iklan ke tag, dan menentukan tarif PPN per akun iklan.
+      // Tanpa ini, data tersimpan tidak bisa dianalisis ulang tanpa CSV asli.
+      const campaign = (r['Campaign name'] || '').trim();
       const key = date + '|' + unit;
       let b = by.get(key);
       if (!b) {
-        b = { date, ad_unit: unit, spend: 0, impressions: 0, reach: 0, clicks: 0,
+        b = { date, ad_unit: unit, campaign, spend: 0, impressions: 0, reach: 0, clicks: 0,
               shop_clicks: 0, lpv: 0, results: 0, delivery: '', rows: 0 };
         by.set(key, b);
       }
+      if (!b.campaign && campaign) b.campaign = campaign;
       b.rows++;
       b.spend += num(r['Amount spent (IDR)']);
       b.impressions += num(r['Impressions']);
@@ -182,9 +187,94 @@ const DailyAgg = (() => {
     };
   }
 
+  /* ── Rehidrasi: agregat harian kembali jadi bentuk yang dimengerti engine ──
+     Agar seluruh analisis keputusan bisa jalan dari data TERSIMPAN, bukan
+     hanya dari CSV yang baru diunggah. Ini yang membuat riwayat berbulan-bulan
+     bisa dianalisis tanpa mengunggah ulang file lama.
+
+     Yang hilang dan tidak bisa dipulihkan: nomor pesanan, nama produk, nama
+     toko, kategori, jam transaksi. Konsekuensinya tab Rincian dan Matching
+     tidak terisi dari mode ini, dan jumlah pesanan berasal dari hitungan yang
+     disimpan, bukan dari menghitung ID unik. Itu memang harga dari tidak
+     menyimpan data mentah. */
+  function rehydrateAffiliate(rows) {
+    const out = [];
+    for (const r of rows || []) {
+      const done = +r.comm_done || 0, pending = +r.comm_pending || 0;
+      const total = done + pending;
+      const orders = Math.max(0, Math.round(r.orders || 0));
+      const n = orders > 0 ? orders : (total > 0 ? 1 : 0);
+      if (!n) continue;
+
+      // Baris dibagi menurut porsi komisi selesai, lalu nilai tiap kelompok
+      // dibagi rata DI DALAM kelompoknya. Membagi dengan 1/n global akan
+      // salah karena jumlah baris selesai dan tertunda berbeda — itu sempat
+      // membuat komisi hasil rehidrasi meleset 8,7% dan mengubah satu vonis.
+      let nDone = total > 0 ? Math.round(n * (done / total)) : n;
+      if (done > 0 && nDone === 0) nDone = 1;              // jangan hilangkan komisi selesai
+      if (pending > 0 && nDone === n) nDone = n - 1;        // maupun yang tertunda
+      const nPend = n - nDone;
+      const perDone = nDone > 0 ? done / nDone : 0;
+      const perPend = nPend > 0 ? pending / nPend : 0;
+      const gmvShare = (+r.gmv || 0) / n;
+      const qtyShare = (+r.qty || 0) / n;
+      const refShare = (+r.refund || 0) / n;
+
+      for (let i = 0; i < n; i++) {
+        const isDone = i < nDone;
+        const comm = isDone ? perDone : perPend;
+        out.push({
+          'ID Pemesanan': `agg-${r.date}-${r.tag}-${i}`,
+          'Status Pesanan': isDone ? 'Selesai' : 'Tertunda',
+          'Waktu Pemesanan': r.date + ' 12:00:00',
+          'Waktu Terselesaikan': isDone ? r.date + ' 12:00:00' : '',
+          'Tag_link1': r.tag,
+          'Total Komisi per Produk(Rp)': String(comm),
+          'Total Komisi per Pesanan(Rp)': String(comm),
+          'Komisi Bersih Affiliate (Rp)': String(comm),
+          'Nilai Pembelian(Rp)': String(gmvShare),
+          'Jumlah Pengembalian Dana(Rp)': String(refShare),
+          'Jumlah': String(qtyShare),
+          _synthetic: true,
+        });
+      }
+    }
+    return out;
+  }
+
+  function rehydrateAds(rows) {
+    return (rows || []).map(r => ({
+      'Reporting starts': r.date,
+      'Ad name': r.ad_unit,
+      // Campaign name menentukan pencocokan tag dan tarif PPN; kalau tidak
+      // tersimpan (data lama), pakai ad name supaya tidak kosong.
+      'Campaign name': r.campaign || r.ad_unit,
+      'Amount spent (IDR)': String(+r.spend || 0),
+      'Impressions': String(+r.impressions || 0),
+      'Reach': String(+r.reach || 0),
+      'Link clicks': String(+r.clicks || 0),
+      'Landing page views': String(+r.lpv || 0),
+      'Results': String(+r.results || 0),
+      'Ad delivery': r.delivery || '',
+      _synthetic: true,
+    }));
+  }
+
+  function rehydrateClicks(rows) {
+    const out = [];
+    for (const r of rows || []) {
+      const n = Math.max(0, Math.round(r.clicks || 0));
+      for (let i = 0; i < n; i++) {
+        out.push({ 'Waktu Klik': r.date + ' 12:00:00', 'Tag_link': r.tag, _synthetic: true });
+      }
+    }
+    return out;
+  }
+
   return {
     hashRow, hashRows, dedupe,
     aggregateAffiliate, aggregateAds, aggregateClicks,
+    rehydrateAffiliate, rehydrateAds, rehydrateClicks,
     planIngest, num, day, isDate,
   };
 })();

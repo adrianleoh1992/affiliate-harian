@@ -50,9 +50,23 @@ function reset(){DATA={affiliate:[],ads:[],clicks:[]};FILES=[];RESULT=null;FILTE
 $('btnReset').onclick=()=>{if(!FILES.length)return reset();if(confirm(`Kosongkan ${FILES.length} file yang dimuat? Snapshot tersimpan tidak terhapus.`)){reset();toast('Data dikosongkan')}};
 $('btnPick').onclick=e=>{e.stopPropagation();$('files').click()};
 const O=['ppn','targetROI','thScale','thPantau','minSpend','minDays','lagDays','streakDays','pendingFactor'];O.concat(['dateStart','dateEnd']).forEach(id=>$(id).addEventListener('change',recalc));
-function opts(){let o={dateStart:$('dateStart').value,dateEnd:$('dateEnd').value};O.forEach(k=>o[k]=parseFloat($(k).value)||0);return o}
+function opts(){let o={dateStart:$('dateStart').value,dateEnd:$('dateEnd').value};O.forEach(k=>o[k]=parseFloat($(k).value)||0);
+  // Tarif PPN per akun iklan. Akun yang tidak diisi memakai o.ppn, jadi
+  // pengguna hanya perlu menyentuh akun yang tarifnya menyimpang.
+  o.ppnByAccount=Object.assign({},window.__ppnByAccount||{});
+  return o}
 function recalc(){if(!DATA.affiliate.length)return;RESULT=E.analyze({...DATA,tagMap:map()},opts());render()}
-function render(){if(!RESULT)return;let r=RESULT,k=r.kpi; if($('settingsPeek'))$('settingsPeek').textContent=`${r.range.start} — ${r.range.end} · PPN ${r.options.ppn}% · target ROI ${r.options.targetROI}%`;renderBanner();renderKpi();renderActions();renderCalibration();renderSynth();renderDecisions();renderMain();renderUnit();renderLeak();renderDaily();renderTrend();renderOpportunity();renderDetails();renderMatch();renderCharts()}
+// Lapisan sumber data memakai ini untuk menganalisis riwayat tersimpan. DATA
+// dan RESULT dideklarasikan dengan let sehingga tidak menempel di window;
+// satu-satunya cara aman mengubahnya dari skrip lain adalah lewat fungsi ini.
+window.__setDataset=function(d){DATA=d;RESULT=E.analyze({...DATA,tagMap:map()},opts());
+  $('emptyState').classList.add('hidden');$('main').classList.remove('hidden');render();return RESULT};
+window.__getDataset=function(){return DATA};
+window.recalc=recalc;window.opts=opts;window.render=render;window.map=map;
+function render(){if(!RESULT)return;let r=RESULT,k=r.kpi;
+  if($('settingsPeek')){const per=Object.keys(r.options.ppnByAccount||{}).length;
+    $('settingsPeek').textContent=`${r.range.start} — ${r.range.end} · PPN ${r.options.ppn}%${per?` (+${per} akun khusus)`:''} · target ROI ${r.options.targetROI}%`;}
+  if(typeof window.renderPpnAccounts==='function')window.renderPpnAccounts(r.adAccounts||[]);renderBanner();renderKpi();renderActions();renderCalibration();renderSynth();renderDecisions();renderMain();renderUnit();renderLeak();renderDaily();renderTrend();renderOpportunity();renderDetails();renderMatch();renderCharts()}
 function renderActions(){
   const A=RESULT.actions;
   // The advice used to be scattered across rows and never added up. These are

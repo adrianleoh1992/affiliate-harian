@@ -49,6 +49,11 @@
       <button class="btn" id="btnAdsAdd" title="Akun iklan baru">+</button>
     </div>
     <div class="chips" id="covStrip"></div>
+    <div class="src-switch" id="srcSwitch">
+      <button class="btn sm active" id="srcUpload" data-src="upload">Analisis File Baru</button>
+      <button class="btn sm" id="srcStored" data-src="stored">Analisis Semua Data Tersimpan</button>
+      <span class="src-note" id="srcNote"></span>
+    </div>
   </div>
 
   <div class="card" id="uploadCard">
@@ -94,7 +99,8 @@
       <div class="ctrls" style="margin-top:15px">
         <div class="field"><label>Dari</label><input type="date" id="dateStart"></div>
         <div class="field"><label>Sampai</label><input type="date" id="dateEnd"></div>
-        <div class="field"><label>PPN Iklan %</label><input type="number" id="ppn" value="11" min="0" step="1"></div>
+        <div class="field"><label>PPN Iklan % (default)</label><input type="number" id="ppn" value="11" min="0" step="0.5">
+          <div class="tip">dipakai akun tanpa tarif sendiri</div></div>
         <div class="field"><label>Target ROI %</label><input type="number" id="targetROI" value="80" min="0" step="5">
           <div class="tip">dasar CPC ideal</div></div>
         <div class="field"><label>ROAS Scale</label><input type="number" id="thScale" value="2" step="0.1"></div>
@@ -107,7 +113,13 @@
           <div class="tip">hari ROAS &lt; 1</div></div>
         <div class="field"><label>Bobot Tertunda</label><input type="number" id="pendingFactor" value="0.95" step="0.01" max="1" min="0"></div>
       </div>
-    </details>
+    <div id="ppnAccounts" class="ppn-accounts hidden">
+        <div class="ppn-head">PPN per Akun Iklan
+          <span class="sub">Beda akun bisa beda tarif — kosongkan untuk memakai default</span></div>
+        <div id="ppnRows"></div>
+      </div>
+
+      </details>
 
     <div id="banners"></div>
     <div class="kpis" id="kpis"></div>
@@ -374,6 +386,7 @@
 <script src="daily-store.js"></script>
 <script src="app.js"></script>
 <script src="daily-layer.js"></script>
+<script src="source-layer.js"></script>
 <script src="supabase-defaults.js"></script>
 <script src="cloud-sync.js"></script>
 <script src="cloud-ui.js"></script>

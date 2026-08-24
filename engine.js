@@ -209,6 +209,17 @@ function analyze(data, options) {
   const clk = data.clicks || [];
   const tagMap = data.tagMap || {};
   const ppnMult = 1 + o.ppn / 100;
+  // PPN bisa berbeda per akun iklan: sebagian akun kena 11%, sebagian tidak
+  // kena sama sekali, tergantung entitas penagih Meta. o.ppnByAccount memetakan
+  // nama akun iklan ke persentasenya; yang tidak terdaftar memakai o.ppn.
+  const ppnMap = o.ppnByAccount || {};
+  const ppnFor = acct => {
+    if (acct && Object.prototype.hasOwnProperty.call(ppnMap, acct)) {
+      const v = Number(ppnMap[acct]);
+      if (isFinite(v) && v >= 0) return 1 + v / 100;
+    }
+    return ppnMult;
+  };
 
   /* Date range: explicit, else auto from data */
   let ds = o.dateStart, de = o.dateEnd;
@@ -324,6 +335,9 @@ function analyze(data, options) {
 
   /* ── Ads aggregation + matching (also per ad unit) ──────────────────── */
   const units = {};
+  // Belanja per akun iklan, dipakai UI untuk menampilkan daftar akun beserta
+  // tarif PPN-nya. Urutan menurut belanja supaya yang terbesar di atas.
+  const adByAcct = {};
   fAds.forEach(r => {
     const rawName = String(pick(r, COL.ads.name) || '');
     const m = matchAdToTag(rawName, affiliateTags, tagMap);
@@ -331,7 +345,12 @@ function analyze(data, options) {
     const b = bucket(t);
 
     const sp = num(pick(r, COL.ads.spend));
-    const spPPN = sp * ppnMult;
+    // Akun iklan tidak ada sebagai kolom di ekspor Meta, jadi campaign name
+    // dipakai sebagai kuncinya — itu yang tersedia dan yang dilihat pengguna
+    // saat menetapkan tarif.
+    const acctKey = String(pick(r, COL.ads.campaign) || rawName || '');
+    const mult = ppnFor(acctKey);
+    const spPPN = sp * mult;
     const cl = int(pick(r, COL.ads.clicks));
     const im = int(pick(r, COL.ads.impr));
     const rc = int(pick(r, COL.ads.reach));
@@ -342,6 +361,11 @@ function analyze(data, options) {
     const ql = String(pick(r, COL.ads.quality) || '').trim();
 
     b.spend += sp; b.clicks += cl; b.impr += im; b.reach += rc; b.lpv += lp; b.allClicks += ac;
+    // Diakumulasi terpisah karena tarifnya bisa berbeda per baris; mengalikan
+    // total mentah dengan satu tarif di akhir akan salah begitu dua akun
+    // dengan PPN berbeda bercampur dalam satu tag.
+    b.spendPPN = (b.spendPPN || 0) + spPPN;
+    if (acctKey) adByAcct[acctKey] = (adByAcct[acctKey] || 0) + sp;
     if (sp > 0 && isDate(d)) b.days.add(d);
     b.adNames[rawName] = (b.adNames[rawName] || 0) + spPPN;
     if (dv) b.delivery[dv] = (b.delivery[dv] || 0) + 1;
@@ -476,7 +500,7 @@ function analyze(data, options) {
 
   const tags = Object.keys(T).map(k => {
     const b = T[k];
-    const spend = b.spend * ppnMult;
+    const spend = b.spendPPN != null ? b.spendPPN : b.spend * ppnMult;
     const commEff = b.commDone + b.commPending * o.pendingFactor;
     const orders = b.orders.size;
     const daysProd = b.days.size;
@@ -705,6 +729,10 @@ function analyze(data, options) {
   return {
     range: { start: ds, end: de, matureUntil, clickStart: clkStart, clickEnd: clkEnd },
     options: o,
+    // Nama akun iklan yang muncul di data, untuk UI menetapkan PPN per akun.
+    adAccounts: Object.keys(adByAcct)
+      .map(name => ({ name, spend: adByAcct[name], ppn: Math.round((ppnFor(name) - 1) * 1000) / 10 }))
+      .sort((a, b) => b.spend - a.spend),
     kpi, tags, adUnits, daily, matchLog, lagProfile, lagCal, settlement, actions,
     breakdown: {
       platform: topOf(platform).map(x => ({ name: x.name, comm: x.value })),
