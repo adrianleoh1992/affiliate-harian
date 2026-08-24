@@ -22,6 +22,8 @@
      window lookup would be permanently undefined. The wrapped finish() below
      captures what this layer needs at the moment app.js has it. */
   const rp = window.rp, nf = n => Math.round(n || 0).toLocaleString('id-ID');
+  // Sel tabel memakai angka penuh; ringkasan di atasnya tetap disingkat.
+  const rpT = n => 'Rp' + Math.round(n || 0).toLocaleString('id-ID');
   const rx = window.rx, esc = window.Engine.escapeHtml;
   const toast = window.toast;
   let FILES_SNAP = [], OPTS_SNAP = {};
@@ -235,8 +237,8 @@
     $('tblStored').querySelector('thead').innerHTML = '<tr>' +
       cols.map((h, i) => `<th class="${i ? 'num' : ''}">${h}</th>`).join('') + '</tr>';
     $('tblStored').querySelector('tbody').innerHTML = days.slice().reverse().map(d => `<tr>
-      <td><b>${d.date}</b></td><td class="num">${rp(d.commEff)}</td><td class="num">${rp(d.spendPpn)}</td>
-      <td class="num ${d.net >= 0 ? 'pos' : 'neg'}">${rp(d.net)}</td>
+      <td><b>${d.date}</b></td><td class="num">${rpT(d.commEff)}</td><td class="num">${rpT(d.spendPpn)}</td>
+      <td class="num ${d.net >= 0 ? 'pos' : 'neg'}">${rpT(d.net)}</td>
       <td class="num">${d.spendPpn > 0 ? d.roas.toFixed(2) : '—'}</td>
       <td class="num">${nf(d.orders)}</td><td class="num">${nf(d.clicks)}</td>
       <td class="num">${d.shopeeClicks ? nf(d.shopeeClicks) : '—'}</td>

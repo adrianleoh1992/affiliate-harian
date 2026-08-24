@@ -113,7 +113,16 @@ function pick(row, keys) {
   for (const k of keys) if (row[k] !== undefined) return row[k];
   return undefined;
 }
-function cleanTag(t) { return String(t == null ? '' : t).replace(/-+$/, '').trim(); }
+// Tag di laporan klik memakai format berlapis "NamaTag-bba---" (5 segmen dipisah "-"),
+// sedangkan laporan komisi hanya menulis "NamaTag". Yang mengikat keduanya adalah
+// segmen PERTAMA. Kalau hanya tanda hubung di akhir yang dibuang, "DressSusana-bba"
+// tidak akan pernah cocok dengan "DressSusana" dan seluruh klik jadi tak terdeteksi.
+function cleanTag(t) {
+  const raw = String(t == null ? '' : t).trim();
+  if (!raw) return '';
+  const head = raw.split('-')[0].trim();
+  return head || raw.replace(/-+$/, '').trim();
+}
 
 /* ── File type detection ─────────────────────────────────────────────────── */
 function detectFileType(headers) {

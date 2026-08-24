@@ -6,6 +6,13 @@ const DEFAULT_MAP={'telesinvideo2':'TelesinGripvideo2','telesinvideo1':'TelesinG
 const esc=E.escapeHtml;
 function rp(n){if(n==null||!isFinite(n))return'Rp0';let a=Math.abs(n),s=n<0?'-':'';if(a>=1e9)return s+'Rp'+(a/1e9).toFixed(2)+' M';if(a>=1e6)return s+'Rp'+(a/1e6).toFixed(1)+' jt';if(a>=1e3)return s+'Rp'+Math.round(a/1e3)+'rb';return s+'Rp'+Math.round(a)}
 function full(n){return'Rp'+Math.round(n||0).toLocaleString('id-ID')} function nf(n){return Math.round(n||0).toLocaleString('id-ID')}
+/* Angka di dalam TABEL ditulis penuh (Rp33.802), bukan disingkat.
+   Singkatan menyembunyikan selisih yang justru jadi dasar keputusan: Rp47.500
+   dan Rp48.400 sama-sama tampil "Rp48rb", padahal bedanya hampir seribu rupiah
+   dan bisa membalik urutan saat kolom diurutkan. KPI dan kalimat ringkasan
+   tetap memakai rp() yang ringkas karena di sana yang dicari kesan besaran,
+   bukan angka persisnya. */
+const rpT=full;
 function rx(n){return n===Infinity?'∞':isFinite(n)?n.toFixed(2)+'x':'—'} function toast(s){let e=$('toast');e.textContent=s;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2400)}
 function accounts(){try{return JSON.parse(localStorage.getItem(LS.accounts))||['default']}catch(e){return['default']}}
 function active(){return localStorage.getItem(LS.active)||accounts()[0]||'default'}
@@ -106,8 +113,8 @@ function renderOpportunity(){
   $('tblOrganic').querySelector('thead').innerHTML='<tr>'+['Tag','Komisi','Order','Komisi/Order','Maks CPC','Kanal Utama'].map((h,i)=>`<th class="${i&&i<5?'num':''}">${h}</th>`).join('')+'</tr>';
   $('tblOrganic').querySelector('tbody').innerHTML=A.organicCandidates.length
     ? A.organicCandidates.map(c=>`<tr><td><b>${esc(c.tag)}</b></td>
-      <td class="num">${rp(c.comm)}</td><td class="num">${nf(c.orders)}</td>
-      <td class="num">${rp(c.avgComm)}</td><td class="num col-ideal"><b>${rp(c.maxCpc)}</b></td>
+      <td class="num">${rpT(c.comm)}</td><td class="num">${nf(c.orders)}</td>
+      <td class="num">${rpT(c.avgComm)}</td><td class="num col-ideal"><b>${rpT(c.maxCpc)}</b></td>
       <td>${esc(c.topPlatform||'—')}</td></tr>`).join('')
     : `<tr><td colspan="6" style="text-align:center;color:var(--text-mute);padding:22px">Belum ada tag organik dengan komisi.</td></tr>`;
   if(!C){$('concentration').innerHTML='<p class="hint">Belum ada tag berbayar.</p>';return}
@@ -127,7 +134,7 @@ function renderMain(){let th=MC.map(x=>`<th class="${x[2]?'num':''}${x[0]==='cpc
   // A verdict that flips when the lag setting moves is not safe to act on yet.
   const s=STAB&&STAB.tags.find(x=>x.tag===t.tag);
   const frail=s&&!s.stable?` <span class="pill" title="Vonis berubah bila lag digeser: ${s.byLag.map(b=>'lag '+b.lag+' → '+b.status).join(', ')}">rapuh</span>`:'';
-  return `<tr><td><div class="tagcell"><span class="nm">${esc(t.tag)} <span class="badge ${t.status}">${t.label}</span>${frail}</span><span class="rs">${esc(t.reason)}${t.bidHint?' · '+esc(t.bidHint):''}</span></div></td><td class="num">${rp(t.spend)}</td><td class="num">${rp(t.commEff)}</td><td class="num ${t.netEff>=0?'pos':'neg'}">${rp(t.netEff)}</td><td class="num">${rx(t.roasEff)}</td><td class="num">${t.spend?t.roi.toFixed(0)+'%':'—'}</td><td class="num">${rp(t.cpm)}</td><td class="num">${t.clicks?nf(t.cpc):'—'}</td><td class="num col-ideal"><b>${t.clicks?nf(t.cpcIdeal):'—'}</b></td><td class="num">${nf(t.orders)}</td><td class="num">${t.clicks?t.convRate.toFixed(2)+'%':'—'}</td><td class="num">${t.orders?rp(t.costPerOrder):'—'}</td><td class="num">${t.daysProd||'—'}</td></tr>`;
+  return `<tr><td><div class="tagcell"><span class="nm">${esc(t.tag)} <span class="badge ${t.status}">${t.label}</span>${frail}</span><span class="rs">${esc(t.reason)}${t.bidHint?' · '+esc(t.bidHint):''}</span></div></td><td class="num">${rpT(t.spend)}</td><td class="num">${rpT(t.commEff)}</td><td class="num ${t.netEff>=0?'pos':'neg'}">${rpT(t.netEff)}</td><td class="num">${rx(t.roasEff)}</td><td class="num">${t.spend?t.roi.toFixed(0)+'%':'—'}</td><td class="num">${rpT(t.cpm)}</td><td class="num">${t.clicks?nf(t.cpc):'—'}</td><td class="num col-ideal"><b>${t.clicks?nf(t.cpcIdeal):'—'}</b></td><td class="num">${nf(t.orders)}</td><td class="num">${t.clicks?t.convRate.toFixed(2)+'%':'—'}</td><td class="num">${t.orders?rpT(t.costPerOrder):'—'}</td><td class="num">${t.daysProd||'—'}</td></tr>`;
 }).join('');$('filterNote').textContent=FILTER?'Disaring: '+FILTER+' · '+rows.length+' tag':'';$('btnClearFilter').classList.toggle('hidden',!FILTER);$('btnClearFilter').onclick=()=>{FILTER=null;renderDecisions();renderMain()};$('tblMain').querySelectorAll('th[data-sort]').forEach(e=>e.onclick=()=>{SORT.key===e.dataset.sort?SORT.dir*=-1:(SORT.key=e.dataset.sort,SORT.dir=-1);renderMain()})}
 /* ── Part 2: ad units, leakage, daily, trend, details, matching, charts ── */
 const UC=[['adName','Ad Unit',0],['delivery','Status',0],['spend','Spend+PPN',1],['cpm','CPM',1],['impr','Impresi',1],['clicks','Klik',1],['cpc','CPC',1],['cpcIdeal','CPC Ideal',1],['ctr','CTR %',1],['orders','Order',1],['convRate','CR %',1],['commEff','Komisi',1],['netEff','Laba',1],['roi','ROI %',1],['costPerOrder','Biaya/Order',1]];
@@ -139,14 +146,14 @@ function renderUnit(){
     <td><div class="tagcell"><span class="nm">${esc(x.adName)} <span class="badge ${x.status}">${x.label}</span></span>
     <span class="rs">Tag: <span class="pill">${esc(x.tag)}</span>${x.estimated?' · komisi proporsional':''}</span></div></td>
     <td><span class="dot ${x.active?'on':'off'}"></span>${x.active?'Nyala':'Mati'}</td>
-    <td class="num">${rp(x.spend)}</td><td class="num">${rp(x.cpm)}</td>
+    <td class="num">${rpT(x.spend)}</td><td class="num">${rpT(x.cpm)}</td>
     <td class="num">${nf(x.impr)}</td><td class="num">${nf(x.clicks)}</td>
     <td class="num">${nf(x.cpc)}</td><td class="num col-ideal"><b>${nf(x.cpcIdeal)}</b></td>
     <td class="num">${x.ctr.toFixed(2)}</td><td class="num">${nf(x.orders)}</td>
-    <td class="num">${x.convRate.toFixed(2)}</td><td class="num">${rp(x.commEff)}</td>
-    <td class="num ${x.netEff>=0?'pos':'neg'}">${rp(x.netEff)}</td>
+    <td class="num">${x.convRate.toFixed(2)}</td><td class="num">${rpT(x.commEff)}</td>
+    <td class="num ${x.netEff>=0?'pos':'neg'}">${rpT(x.netEff)}</td>
     <td class="num ${x.roi>=0?'pos':'neg'}">${x.spend?x.roi.toFixed(0)+'%':'—'}</td>
-    <td class="num">${x.orders?rp(x.costPerOrder):'—'}</td></tr>`).join('');
+    <td class="num">${x.orders?rpT(x.costPerOrder):'—'}</td></tr>`).join('');
 }
 function renderLeak(){
   const r=RESULT.range;
@@ -157,7 +164,7 @@ function renderLeak(){
     const L=t.leak,note=L.severity==='bad'?'Sebagian besar klik tidak sampai — periksa link':L.severity==='warn'?'Ada kebocoran, layak dicek':L.pct>=115?'Termasuk klik ulang dan trafik organik':'Wajar';
     return `<tr><td><b>${esc(t.tag)}</b></td><td class="num">${nf(L.metaClicks)}</td><td class="num">${nf(L.shopeeClicks)}</td>
       <td class="num leak-${L.severity}">${L.pct.toFixed(1)}%</td><td class="num">${nf(L.failed)}</td>
-      <td class="num ${L.wasted>0?'neg':''}">${L.wasted>0?rp(L.wasted):'—'}</td>
+      <td class="num ${L.wasted>0?'neg':''}">${L.wasted>0?rpT(L.wasted):'—'}</td>
       <td style="white-space:normal;font-size:11px;color:var(--text-dim)">${note}</td></tr>`;
   }).join(''):`<tr><td colspan="7" style="text-align:center;color:var(--text-mute);padding:24px">Muat Website Click Report untuk melihat kebocoran.</td></tr>`;
 }
@@ -167,8 +174,8 @@ function renderDaily(){
   $('tblDaily').querySelector('thead').innerHTML='<tr>'+['Tanggal','Biaya','Komisi','Laba','ROAS','Klik Meta','Klik Shopee','Order','CR %','CPC'].map((h,i)=>`<th class="${i?'num':''}">${h}</th>`).join('')+'</tr>';
   $('tblDaily').querySelector('tbody').innerHTML=d.slice().reverse().map(x=>`<tr${x.mature?'':' style="opacity:.6"'}>
     <td><b>${x.date}</b>${x.mature?'':' <span class="pill">belum matang</span>'}</td>
-    <td class="num">${rp(x.spend)}</td><td class="num">${rp(x.comm)}</td>
-    <td class="num ${x.net>=0?'pos':'neg'}">${rp(x.net)}</td>
+    <td class="num">${rpT(x.spend)}</td><td class="num">${rpT(x.comm)}</td>
+    <td class="num ${x.net>=0?'pos':'neg'}">${rpT(x.net)}</td>
     <td class="num">${x.spend?x.roas.toFixed(2):'—'}</td><td class="num">${nf(x.clicks)}</td>
     <td class="num">${x.shopeeClicks?nf(x.shopeeClicks):'—'}</td><td class="num">${nf(x.orders)}</td>
     <td class="num">${x.clicks?x.convRate.toFixed(2):'—'}</td><td class="num">${x.clicks?nf(x.cpc):'—'}</td></tr>`).join('');
@@ -215,10 +222,10 @@ function renderDetails(){
   $('tblProd').querySelector('thead').innerHTML='<tr>'+['Produk','Komisi','GMV','Qty'].map((h,i)=>`<th class="${i?'num':''}">${h}</th>`).join('')+'</tr>';
   $('tblProd').querySelector('tbody').innerHTML=b.productByComm.slice(0,12).map(p=>`<tr>
     <td style="white-space:normal;max-width:320px">${esc(p.name)}</td>
-    <td class="num">${rp(p.comm)}</td><td class="num">${rp(p.gmv)}</td><td class="num">${nf(p.qty)}</td></tr>`).join('');
+    <td class="num">${rpT(p.comm)}</td><td class="num">${rpT(p.gmv)}</td><td class="num">${nf(p.qty)}</td></tr>`).join('');
   $('tblShop').querySelector('thead').innerHTML='<tr><th>Toko</th><th class="num">Komisi</th></tr>';
   $('tblShop').querySelector('tbody').innerHTML=b.shop.slice(0,12).map(s=>`<tr>
-    <td style="white-space:normal;max-width:280px">${esc(s.name)}</td><td class="num">${rp(s.comm)}</td></tr>`).join('');
+    <td style="white-space:normal;max-width:280px">${esc(s.name)}</td><td class="num">${rpT(s.comm)}</td></tr>`).join('');
 }
 function renderMatch(){
   $('tblMatch').querySelector('thead').innerHTML='<tr>'+['Nama Iklan','Tag Hasil','Metode','Keyakinan','Biaya','Klik'].map((h,i)=>`<th class="${i>2?'num':''}">${h}</th>`).join('')+'</tr>';
@@ -226,7 +233,7 @@ function renderMatch(){
     const c=m.confidence>=.9?'leak-ok':m.confidence>=.5?'leak-warn':'leak-bad';
     return `<tr><td><b>${esc(m.adName)}</b></td><td><span class="pill">${esc(m.tag)}</span></td>
       <td>${esc(m.method)}</td><td class="num ${c}">${(m.confidence*100).toFixed(0)}%</td>
-      <td class="num">${rp(m.spend)}</td><td class="num">${nf(m.clicks)}</td></tr>`;
+      <td class="num">${rpT(m.spend)}</td><td class="num">${nf(m.clicks)}</td></tr>`;
   }).join('');
 }
 /* ── Part 3: charts, tabs, modals, snapshots, export ── */

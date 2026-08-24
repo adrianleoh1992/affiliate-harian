@@ -23,6 +23,18 @@ const DailyAgg = (() => {
     return JSON.stringify(Object.keys(row).sort().map(k => [k, row[k]]));
   }
 
+  /* Tag klik ditulis berlapis: "NamaTag-bba---" (5 segmen). Laporan komisi hanya
+     menulis "NamaTag". Yang menyatukan keduanya adalah segmen PERTAMA, jadi tag
+     dipotong di tanda hubung pertama — bukan sekadar membuang hubung di ekor.
+     Harus sama persis dengan cleanTag() di engine.js, kalau tidak angka lapisan
+     harian akan berbeda dari layar Keputusan untuk tag yang sama. */
+  function cleanTag(t) {
+    const raw = String(t == null ? '' : t).trim();
+    if (!raw) return '';
+    const head = raw.split('-')[0].trim();
+    return head || raw.replace(/-+$/, '').trim();
+  }
+
   /* FNV-1a 64-bit (as two 32-bit halves) — synchronous, dependency-free, and
      collision-safe enough for row identity within a single account's data.
      crypto.subtle is async-only, which would force every dedup loop to await. */
@@ -83,7 +95,7 @@ const DailyAgg = (() => {
     for (const r of rows) {
       const date = day(r['Waktu Pemesanan']);
       if (!isDate(date)) continue;
-      const tag = (r['Tag_link1'] || '').replace(/-+$/, '').trim() || '(tanpa tag)';
+      const tag = cleanTag(r['Tag_link1']) || '(tanpa tag)';
       const status = (r['Status Pesanan'] || '').trim();
       const key = date + '|' + tag;
       let b = by.get(key);
@@ -157,7 +169,7 @@ const DailyAgg = (() => {
     for (const r of rows) {
       const date = day(r['Waktu Klik']);
       if (!isDate(date)) continue;
-      const tag = (r['Tag_link'] || '').replace(/-+$/, '').trim() || '(tanpa tag)';
+      const tag = cleanTag(r['Tag_link']) || '(tanpa tag)';
       const key = date + '|' + tag;
       let b = by.get(key);
       if (!b) { b = { date, tag, clicks: 0, by_region: {}, by_source: {} }; by.set(key, b); }

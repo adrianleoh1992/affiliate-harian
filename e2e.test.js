@@ -116,6 +116,57 @@ const check = (label, ok, detail) => {
   const blank = await p.$$eval('canvas[id]', c => c.filter(x => x.width === 0).map(x => x.id));
   check('semua chart ter-render', blank.length === 0, blank.join(', ') || 'nol kosong');
 
+  console.log('\n=== KETERBACAAN TABEL ===');
+  // Blok RIWAYAT di atas berpindah ke tab "tersimpan", sehingga #tblMain (milik
+  // tab Keputusan) jadi tersembunyi dan semua lebarnya terukur 0. Kembali dulu,
+  // kalau tidak uji geser/sticky mengukur elemen yang tidak terlihat.
+  await p.click('[data-tab="keputusan"]');
+  await p.waitForTimeout(900);
+  // Angka di tabel harus penuh (Rp719.952), bukan disingkat "Rp720rb":
+  // singkatan menyembunyikan selisih yang jadi dasar keputusan dan bisa
+  // membuat dua baris berbeda tampak sama persis.
+  const tbl = await p.evaluate(() => {
+    const cells = [...document.querySelectorAll('#tblMain tbody td.num')].map(e => e.textContent.trim());
+    const kpis = [...document.querySelectorAll('.kpi .val')].map(e => e.textContent.trim());
+    return {
+      abbrev: cells.filter(c => /rb$|jt$| M$/.test(c)),
+      full: cells.filter(c => /Rp[\d.]*\d\.\d{3}/.test(c)).length,
+      kpiAbbrev: kpis.filter(c => /rb$|jt$| M$/.test(c)).length,
+    };
+  });
+  check('nol angka singkat di sel tabel', tbl.abbrev.length === 0, tbl.abbrev.slice(0, 4).join(', ') || 'bersih');
+  check('sel tabel memakai angka penuh', tbl.full > 0, tbl.full + ' sel');
+  check('KPI tetap ringkas', tbl.kpiAbbrev > 0, tbl.kpiAbbrev + ' KPI');
+
+  // Kolom nama harus bertahan saat tabel digeser, kalau tidak konteks barisnya
+  // hilang begitu kolom kanan dilihat. Diuji di lebar yang memang memaksa geser.
+  await p.setViewportSize({ width: 760, height: 900 });
+  await p.waitForTimeout(900);
+  const stick = await p.evaluate(async () => {
+    const t = document.querySelector('#tblMain'), s = t.closest('.tscroll');
+    const cell = () => t.querySelector('td:first-child');
+    const maxScroll = s.scrollWidth - s.clientWidth;
+    const before = { x: Math.round(cell().getBoundingClientRect().left), text: cell().innerText.split('\n')[0].trim() };
+    s.scrollLeft = s.scrollWidth;
+    await new Promise(r => setTimeout(r, 400));
+    const c = cell(), cs = getComputedStyle(c);
+    return { before, maxScroll, moved: Math.round(s.scrollLeft),
+             x: Math.round(c.getBoundingClientRect().left),
+             text: c.innerText.split('\n')[0].trim(), pos: cs.position, bg: cs.backgroundColor };
+  });
+  // Yang dibuktikan: tabel BENAR-BENAR meluap di lebar sempit, dan geser
+  // mencapai ujung kanan. Ambang mutlak (mis. >100px) rapuh karena lebar
+  // tabel berubah mengikuti jumlah kolom dan panjang isi sel.
+  check('tabel sempit memang meluap', stick.maxScroll > 0, 'luap ' + stick.maxScroll + 'px');
+  check('tabel sempit memang bisa digeser', stick.moved >= stick.maxScroll && stick.moved > 0,
+        stick.moved + 'px dari ' + stick.maxScroll + 'px');
+  check('kolom nama tetap di tempat saat digeser', Math.abs(stick.x - stick.before.x) <= 2,
+    `${stick.before.x}px -> ${stick.x}px`);
+  check('nama baris masih terbaca', stick.text === stick.before.text && stick.text.length > 0, stick.text);
+  check('latar kolom nama solid', !/rgba\(0, 0, 0, 0\)/.test(stick.bg), stick.bg);
+  await p.setViewportSize({ width: 1500, height: 1000 });
+  await p.waitForTimeout(700);
+
   console.log('\n=== ISOLASI AKUN ===');
   p.once('dialog', async d => await d.accept('Akun Kedua'));
   await p.click('#btnShopeeAdd');
