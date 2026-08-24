@@ -136,6 +136,19 @@ const check = (label, ok, detail) => {
     (await window.__dailyStore.listAccounts('shopee')).map(a => a.name));
   check('bertahan setelah reload', persisted.length === 2, persisted.join(', '));
 
+  console.log('\n=== KEPALA HALAMAN ===');
+  // Favicon pernah tertulis dua kali; potongan yang menggantung di luar tag
+  // bocor ke halaman sebagai teks 'BD">' tepat di atas header.
+  const head = await p.evaluate(() => ({
+    stray: document.body.innerText.includes('BD">') || document.body.innerText.includes('</svg>'),
+    icons: document.querySelectorAll('link[rel="icon"]').length,
+    iconClosed: [...document.querySelectorAll('link[rel="icon"]')]
+      .every(l => l.href.trim().endsWith('</svg>')),
+  }));
+  check('tidak ada markup favicon yang bocor jadi teks', !head.stray);
+  check('hanya satu link favicon', head.icons === 1, head.icons + ' link');
+  check('favicon utuh sampai penutup tag', head.iconClosed);
+
   console.log('\n=== MOBILE 390px ===');
   await p.setViewportSize({ width: 390, height: 844 });
   await p.waitForTimeout(900);
