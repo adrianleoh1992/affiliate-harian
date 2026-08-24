@@ -67,7 +67,10 @@
     MODE = mode;
     ['srcUpload', 'srcStored'].forEach(id => {
       const b = $(id);
-      if (b) b.classList.toggle('active', b.dataset.src === mode);
+      if (!b) return;
+      const on = b.dataset.src === mode;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
   }
 

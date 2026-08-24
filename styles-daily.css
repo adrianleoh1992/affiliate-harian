@@ -94,16 +94,42 @@
   border-radius:8px;background:var(--surface);color:var(--text);font-size:12.5px}
 .ppn-pct{font-size:11px;color:var(--text-dim)}
 
-.src-switch{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
-.src-switch .btn.sm{min-height:34px;font-size:12px}
-.src-switch .btn.sm.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.src-switch{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-top:12px}
+.src-label{font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+  color:var(--text-mute)}
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border-strong);
+  border-radius:9px;padding:3px;gap:3px}
+.seg-btn{font:inherit;font-size:12px;font-weight:600;min-height:32px;padding:0 13px;
+  border:0;border-radius:6px;background:transparent;color:var(--text-dim);cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;transition:.15s;white-space:nowrap}
+.seg-btn:hover{color:var(--text)}
+.seg-btn.active{background:var(--accent);color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.14)}
+.seg-btn.active::before{content:'✓';font-size:11px;font-weight:800}
+.seg-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .src-note{font-size:11.5px;color:var(--text-dim)}
 .src-note.ok{color:var(--ok)}
 .src-note.bad{color:var(--bad)}
+.src-note.warn{color:var(--warn)}
+
+/* Kartu periode berdiri sendiri di atas Pengaturan: filter ini paling sering
+   dipakai, jadi tidak boleh bersembunyi di balik panel yang tertutup. */
+.range-card{padding:13px 18px}
+.range-presets{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+.range-card .range-presets{margin:0}
+#storedPresets{margin-bottom:14px}
 
 @media(max-width:640px){
   .ppn-row{grid-template-columns:1fr;gap:4px}
   .ppn-input input{width:100%}
+  /* Pil rencana simpan bisa memuat kalimat panjang ("sudah diunggah ..."); di
+     ponsel ia harus boleh patah, bukan memaksa halaman menggeser ke samping. */
+  .plan-pill{white-space:normal}
   .src-switch{flex-direction:column;align-items:stretch}
-  .src-switch .btn.sm{width:100%;justify-content:center;min-height:44px}
+  .seg{width:100%}
+  .seg-btn{flex:1;justify-content:center;min-height:44px;white-space:normal;text-align:center}
+  /* Enam preset tidak muat sebaris di ponsel; dibungkus jadi grid agar tidak
+     memaksa halaman menggeser ke samping. */
+  .range-presets{flex-direction:column;align-items:stretch}
+  .range-presets .seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+  .range-presets .seg-btn{padding:0 6px;font-size:11.5px}
 }

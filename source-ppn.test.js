@@ -3,9 +3,9 @@
    2. PPN per akun iklan, tersimpan lintas reload.
 */
 const { chromium } = require('playwright');
-const D = require('os').homedir() + '/Downloads/';
-const EXE = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const URL = 'http://127.0.0.1:8899/index.html';
+const D = process.env.CSV_DIR || require('os').homedir() + '/Downloads/';
+const EXE = process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const URL = process.env.URL || 'http://127.0.0.1:8899/index.html';
 const F = [
   D + 'AffiliateCommissionReport_202608222201.csv',
   D + 'AW-Adrian-Ads-Jul-23-2026-Aug-21-2026.csv',
@@ -76,9 +76,27 @@ const check = (l, ok, d) => {
   check('akun iklan terdaftar', ppnUi.count === 6, ppnUi.count + ' akun');
   console.log('  akun: ' + ppnUi.names.join(', '));
 
-  // Set akun terbesar jadi 0%, sisanya biarkan default.
+  // Default harus 0% — tanpa PPN sampai pengguna menyetelnya sendiri.
+  const defPpn = await p.$eval('#ppn', e => e.value);
+  check('default PPN 0%', parseFloat(defPpn) === 0, defPpn + '%');
+
+  // Panel pengaturan harus terbaca sebagai kontrol lipat, bukan teks statis:
+  // seluruh baris klikabel (bukan hanya panah kecil), plus label buka/tutup.
+  await p.evaluate(() => document.getElementById('settingsCard').open = false);
+  await p.waitForTimeout(300);
+  const sum = await p.locator('.settings-summary').boundingBox();
+  await p.mouse.click(sum.x + sum.width / 2, sum.y + sum.height / 2);
+  await p.waitForTimeout(400);
+  check('klik di mana saja pada baris membuka pengaturan',
+    await p.$eval('#settingsCard', e => e.open), Math.round(sum.width) + 'x' + Math.round(sum.height) + 'px');
+  check('label pil jadi Tutup saat terbuka',
+    /Tutup/.test(await p.$eval('#settingsCue', e => getComputedStyle(e, '::after').content)));
+  const cur = await p.$eval('.settings-summary', e => getComputedStyle(e).cursor);
+  check('kursor pointer pada baris', cur === 'pointer', cur);
+
+  // Set akun terbesar jadi 11%, sisanya biarkan default 0%.
   const firstName = await p.$eval('[data-ppn-acct]', e => e.dataset.ppnAcct);
-  await p.fill(`[data-ppn-acct="${firstName}"]`, '0');
+  await p.fill(`[data-ppn-acct="${firstName}"]`, '11');
   await p.dispatchEvent(`[data-ppn-acct="${firstName}"]`, 'change');
   await p.waitForTimeout(2500);
 
@@ -87,9 +105,9 @@ const check = (l, ok, d) => {
     peek: document.getElementById('settingsPeek').textContent,
     applied: RESULT.options.ppnByAccount,
   }));
-  check('biaya turun setelah PPN 0', afterPpn.spend < fromFile.spend,
+  check('biaya naik setelah PPN 11 pada satu akun', afterPpn.spend > fromFile.spend,
     'Rp' + Math.round(fromFile.spend).toLocaleString('id-ID') + ' -> Rp' + Math.round(afterPpn.spend).toLocaleString('id-ID'));
-  check('tarif khusus terpakai', afterPpn.applied[firstName] === 0);
+  check('tarif khusus terpakai', afterPpn.applied[firstName] === 11);
   check('ringkasan menyebut akun khusus', /akun khusus/.test(afterPpn.peek), afterPpn.peek.slice(0, 80));
 
   // Kembalikan ke default agar perbandingan mode berikutnya adil.
@@ -100,6 +118,21 @@ const check = (l, ok, d) => {
   console.log('\n=== MODE: SEMUA DATA TERSIMPAN ===');
   await p.click('#srcStored');
   await p.waitForTimeout(4000);
+
+  // Mode aktif harus terbaca tanpa mengandalkan warna saja.
+  const segState = await p.evaluate(() => {
+    const u = document.getElementById('srcUpload'), s = document.getElementById('srcStored');
+    return {
+      grouped: !!(u.closest('.seg') && u.closest('.seg') === s.closest('.seg')),
+      storedOn: s.classList.contains('active') && s.getAttribute('aria-pressed') === 'true',
+      uploadOff: !u.classList.contains('active') && u.getAttribute('aria-pressed') === 'false',
+      tick: getComputedStyle(s, '::before').content,
+    };
+  });
+  check('dua pilihan dalam satu sakelar', segState.grouped);
+  check('mode tersimpan ditandai aktif', segState.storedOn);
+  check('mode file baru ditandai non-aktif', segState.uploadOff);
+  check('penanda aktif bukan warna saja', /✓/.test(segState.tick), segState.tick);
   const stored = await p.evaluate(() => ({
     comm: RESULT.kpi.commEff, spend: RESULT.kpi.spend, orders: RESULT.kpi.orders,
     roas: +RESULT.kpi.roasEff.toFixed(3),

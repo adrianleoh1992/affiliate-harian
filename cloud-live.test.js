@@ -2,8 +2,8 @@
    terhubung ke project tanpa pengguna menempel kredensial, dan apakah layar
    login muncul dengan benar. Tidak melakukan login (butuh email nyata). */
 const { chromium } = require('playwright');
-const EXE = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const URL = 'http://127.0.0.1:8899/index.html';
+const EXE = process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const URL = process.env.URL || 'http://127.0.0.1:8899/index.html';
 
 let fail = 0;
 const check = (label, ok, detail) => {

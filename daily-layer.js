@@ -189,7 +189,7 @@
     const days = [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date));
     // Same two adjustments engine.js makes, or the tabs disagree: Meta reports
     // spend without VAT, and pending commission is discounted.
-    const ppn = 1 + (OPTS_SNAP.ppn != null ? OPTS_SNAP.ppn : 11) / 100;
+    const ppn = 1 + (OPTS_SNAP.ppn != null ? OPTS_SNAP.ppn : 0) / 100;
     const pf = OPTS_SNAP.pendingFactor != null ? OPTS_SNAP.pendingFactor : 0.95;
     days.forEach(d => {
       d.spendPpn = d.spend * ppn;

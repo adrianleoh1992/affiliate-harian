@@ -79,8 +79,10 @@ const check = (label, ok, detail) => {
     const ads = await window.__dailyStore.range(a.id, 'ads');
     const sum = (x, f) => x.reduce((t, r) => t + (r[f] || 0), 0);
     const commEff = (sum(aff, 'comm') - sum(aff, 'comm_pending')) + sum(aff, 'comm_pending') * 0.95;
+    // PPN dibaca dari UI, bukan diasumsikan: defaultnya bisa berubah.
+    const ppnMult = 1 + (parseFloat(document.getElementById('ppn').value) || 0) / 100;
     return { rows: aff.length, comm: Math.round(sum(aff, 'comm')), orders: sum(aff, 'orders'),
-             roas: +(commEff / (sum(ads, 'spend') * 1.11)).toFixed(2) };
+             roas: +(commEff / (sum(ads, 'spend') * ppnMult)).toFixed(2) };
   });
   check('data tersimpan', stored.rows > 0, stored.rows + ' baris affiliate');
 

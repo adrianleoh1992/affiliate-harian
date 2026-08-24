@@ -10,7 +10,7 @@
 
 /* ── Defaults ────────────────────────────────────────────────────────────── */
 const DEFAULTS = {
-  ppn: 11,             // % PPN atas biaya iklan
+  ppn: 0,              // % PPN atas biaya iklan (default: tanpa PPN)
   thScale: 2.0,        // ROAS >= => SCALE
   thPantau: 1.0,       // ROAS >= => PANTAU
   minSpend: 50000,     // Rp minimum sebelum tag boleh divonis

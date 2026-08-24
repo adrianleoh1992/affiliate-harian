@@ -50,8 +50,11 @@
     </div>
     <div class="chips" id="covStrip"></div>
     <div class="src-switch" id="srcSwitch">
-      <button class="btn sm active" id="srcUpload" data-src="upload">Analisis File Baru</button>
-      <button class="btn sm" id="srcStored" data-src="stored">Analisis Semua Data Tersimpan</button>
+      <span class="src-label">Sumber analisis</span>
+      <div class="seg" role="group" aria-label="Sumber analisis">
+        <button class="seg-btn active" id="srcUpload" data-src="upload" aria-pressed="true">Analisis File Baru</button>
+        <button class="seg-btn" id="srcStored" data-src="stored" aria-pressed="false">Analisis Semua Data Tersimpan</button>
+      </div>
       <span class="src-note" id="srcNote"></span>
     </div>
   </div>
@@ -94,12 +97,27 @@
 
   <div id="main" class="hidden">
 
+    <div class="card range-card">
+      <div class="range-presets" id="rangePresets">
+        <span class="src-label">Periode</span>
+        <div class="seg" role="group" aria-label="Periode analisis">
+          <button class="seg-btn" data-days="1" aria-pressed="false">Kemarin</button>
+          <button class="seg-btn" data-days="3" aria-pressed="false">3 Hari</button>
+          <button class="seg-btn" data-days="7" aria-pressed="false">7 Hari</button>
+          <button class="seg-btn" data-days="14" aria-pressed="false">14 Hari</button>
+          <button class="seg-btn" data-days="30" aria-pressed="false">30 Hari</button>
+          <button class="seg-btn" data-days="all" aria-pressed="false">Semua</button>
+        </div>
+        <span class="src-note" id="rangeNote"></span>
+      </div>
+    </div>
+
     <details class="card" id="settingsCard">
-      <summary class="settings-summary">Pengaturan Analisis <span id="settingsPeek"></span></summary>
-      <div class="ctrls" style="margin-top:15px">
+      <summary class="settings-summary">Pengaturan Analisis <span id="settingsPeek"></span><span class="settings-cue" id="settingsCue"></span></summary>
+      <div class="ctrls ctrls-settings">
         <div class="field"><label>Dari</label><input type="date" id="dateStart"></div>
         <div class="field"><label>Sampai</label><input type="date" id="dateEnd"></div>
-        <div class="field"><label>PPN Iklan % (default)</label><input type="number" id="ppn" value="11" min="0" step="0.5">
+        <div class="field"><label>PPN Iklan % (default)</label><input type="number" id="ppn" value="0" min="0" step="0.5">
           <div class="tip">dipakai akun tanpa tarif sendiri</div></div>
         <div class="field"><label>Target ROI %</label><input type="number" id="targetROI" value="80" min="0" step="5">
           <div class="tip">dasar CPC ideal</div></div>
@@ -243,7 +261,19 @@
         <div class="card-head"><h2>Riwayat Harian Tersimpan</h2>
           <span class="sub" id="storedNote"></span></div>
         <p class="hint">Data ini menumpuk lintas periode dari setiap unggahan yang Anda simpan — tidak perlu mengunggah ulang CSV lama.</p>
-        <div class="ctrls" style="grid-template-columns:auto auto auto;margin-bottom:14px">
+        <div class="range-presets" id="storedPresets">
+          <span class="src-label">Periode</span>
+          <div class="seg" role="group" aria-label="Periode riwayat">
+            <button class="seg-btn" data-days="1" aria-pressed="false">Kemarin</button>
+            <button class="seg-btn" data-days="3" aria-pressed="false">3 Hari</button>
+            <button class="seg-btn" data-days="7" aria-pressed="false">7 Hari</button>
+            <button class="seg-btn" data-days="14" aria-pressed="false">14 Hari</button>
+            <button class="seg-btn" data-days="30" aria-pressed="false">30 Hari</button>
+            <button class="seg-btn" data-days="all" aria-pressed="false">Semua</button>
+          </div>
+          <span class="src-note" id="storedRangeNote"></span>
+        </div>
+        <div class="ctrls ctrls-range">
           <div class="field"><label>Dari</label><input type="date" id="dsStart"></div>
           <div class="field"><label>Sampai</label><input type="date" id="dsEnd"></div>
           <div class="field"><label>&nbsp;</label><button class="btn" id="btnRange">Terapkan</button></div>
@@ -387,6 +417,7 @@
 <script src="app.js"></script>
 <script src="daily-layer.js"></script>
 <script src="source-layer.js"></script>
+<script src="range-presets.js"></script>
 <script src="supabase-defaults.js"></script>
 <script src="cloud-sync.js"></script>
 <script src="cloud-ui.js"></script>
