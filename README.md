@@ -1,192 +1,183 @@
 # Affiliate Harian
 
-Penyimpanan data harian per akun untuk affiliate Shopee yang beriklan di Meta Ads.
+Aplikasi browser untuk mengolah laporan Shopee Affiliate dan Meta Ads, menyimpan
+agregat harian per akun, serta berbagi data melalui workspace Supabase opsional.
+Pilih repo ini untuk alur kerja tim yang memerlukan **Kirim/Ambil data antarperangkat**
+dan pengelolaan akses `owner`, `editor`, atau `viewer`.
 
-Berisi seluruh analisis keputusan dari [affiliate-dashboard](https://github.com/adrianleoh1992/affiliate-dashboard),
-ditambah tiga hal yang tidak ada di sana:
+## Pilih repo sesuai tugas
 
-- **Data tersimpan permanen per akun** — tidak hilang saat halaman ditutup
-- **Deduplikasi berlapis** — file yang sama tidak pernah menggandakan angka
-- **Tren lintas periode** — menumpuk dari waktu ke waktu tanpa mengunggah ulang CSV lama
+Kedua aplikasi memiliki penyimpanan harian dan deduplikasi. Klaim lama bahwa
+`affiliate-dashboard` selalu mulai dari nol atau menggandakan unggahan identik
+bukan gambaran `main` saat ini.
 
-Berjalan sepenuhnya di browser. Tidak ada server, tidak ada data yang dikirim ke mana pun.
-
-## Kenapa proyek terpisah
-
-Dashboard menghitung ulang dari nol setiap kali CSV diunggah. Kalau file yang sama masuk
-dua kali, komisi menggandakan diam-diam — pada data uji, ROAS 1,95x terbaca **3,89x**.
-
-Menyimpan data secara permanen menuntut deduplikasi yang benar-benar teruji. Karena itu
-lapisan penyimpanan dikembangkan terpisah, bukan ditempelkan ke dashboard yang sudah
-dipakai untuk mengambil keputusan.
-
-## Cara pakai
-
-1. Buka aplikasi
-2. Buat akun Shopee dengan tombol **+** di kartu Akun
-3. Unggah ketiga CSV
-4. Periksa **rencana simpan** yang muncul, lalu tekan Simpan
-5. Buka tab **Data Tersimpan** untuk melihat tren
-
-Unggahan berikutnya cukup file periode terbaru — data lama sudah tersimpan.
-
-## Rencana simpan sebelum menulis
-
-Tidak ada satu baris pun masuk penyimpanan sebelum Anda melihat apa yang akan berubah:
-
-```
-Rencana simpan ke akun BBA Utama
-  AFFILIATE   340 baru · 200 diperbarui · 1.408 duplikat dilewati   30 hari · 23 Jul — 21 Agu
-  IKLAN       180 baru                                              30 hari
-  KLIK         90 baru                                               7 hari
-```
-
-Ini penting karena **CSV tidak memuat identitas akun sama sekali** — Meta export tidak
-punya kolom `Account name`, dan `Nama Toko` di laporan affiliate adalah toko penjual,
-bukan akun Anda. Salah pilih akun akan mencampur data dua akun dan sulit dipisahkan
-setelah tersimpan.
-
-## Empat lapis anti-duplikasi
-
-| Lapis | Menangkap |
+| Kebutuhan | Repo yang dipilih |
 |---|---|
-| Hash file | File identik, meski namanya diubah |
-| Hash baris | Periode tumpang tindih antar file berbeda |
-| Kunci `(akun, tanggal, tag)` | Simpan ulang jadi perbarui, bukan baris baru |
-| Log upload | Jejak apa yang pernah masuk, kapan, berapa |
+| Analisis lokal, penyimpanan harian, backup/restore harian lengkap, dan laporan PDF lokal | [affiliate-dashboard](https://github.com/adrianleoh1992/affiliate-dashboard) |
+| Analisis harian per akun dengan workspace tim dan sinkronisasi Supabase | **affiliate-harian** (repo ini) |
+| Memperbaiki login, panel Cloud, push/pull, atau kebijakan akses database | Repo ini: [cloud-ui.js](cloud-ui.js), [cloud-sync.js](cloud-sync.js), [supabase-schema.sql](supabase-schema.sql) |
 
-### Kunci dedup harus hash seluruh baris
+### Fitur pada `main` yang diperiksa
 
-Kunci komposit yang tampak masuk akal justru berbahaya. Diuji pada CSV asli:
+Pemeriksaan dokumentasi 2 Oktober 2026 menggunakan
+[Harian `f0a6104`](https://github.com/adrianleoh1992/affiliate-harian/commit/f0a6104065ee963923abd1f3b7932228d4155e2b)
+dan [Dashboard `caa7be4`](https://github.com/adrianleoh1992/affiliate-dashboard/commit/caa7be44f27c332e37c6544063a1077041f4a110).
+Ini perbandingan implementasi pada commit tersebut, bukan janji kesamaan fitur
+atau hasil hitung pada semua versi berikutnya.
 
-```
-kunci order+produk+waktu+komisi → 1.408 baris dianggap duplikat
-                                → 0 benar-benar identik
-                                → 1.408 baris SAH akan terhapus
-```
+| Kemampuan | Harian | Dashboard |
+|---|---|---|
+| Agregat harian per akun di IndexedDB | Ada | Ada |
+| Dedup file/baris dan jejak unggahan | Ada | Ada |
+| Riwayat dari agregat tersimpan | Tren dan pilihan sumber analisis | Tampilan riwayat harian |
+| Ekspor/impor snapshot analisis | Ada | Ada |
+| Ekspor data harian | JSON per akun; bukan backup/restore lengkap | Backup/restore harian lengkap |
+| Workspace Supabase, panel Cloud, skema RLS | Ada, opsional | Tidak ada pada commit yang diperiksa |
+| Dependensi browser saat halaman dimuat | PapaParse, Chart.js, dan font dari CDN | Aset lokal yang disertakan repo |
 
-Penyebabnya satu pesanan bisa berisi beberapa produk berbeda harga:
+Tidak ada keputusan penggabungan atau penghentian repo dalam perbandingan ini.
 
-```
-baris 29: qty=1  nilai=17.999  Tertunda
-baris 30: qty=1  nilai=35.999  Tertunda
-baris 31: qty=1  nilai=17.287  Tertunda
-```
+## Mulai cepat
 
-Hash seluruh isi baris: 11.470 dari 11.470 unik, nol false positive.
-
-## Yang disimpan
-
-Agregat harian, bukan transaksi mentah.
-
-| | CSV mentah | Agregat harian |
-|---|---:|---:|
-| Baris per bulan | 11.470 | 340 |
-| Ukuran 30 hari | 23,1 MB | **123 KB** |
-| Proyeksi 1 tahun | ~280 MB | **1,4 MB** |
-
-Kompresi 192×. Tidak ada ID pesanan atau nama produk yang ikut tersimpan — cukup untuk
-tren, ROAS harian, dan deteksi kebocoran. CSV mentah tetap diproses di browser lalu
-dilupakan.
-
-## Sepuluh tab
-
-| Tab | Isi |
-|---|---|
-| Keputusan | Proyeksi dampak, kalibrasi lag, vonis per tag |
-| Per Ad Unit | Satu baris per iklan Meta: CPM, impresi, reach, CTR, CPC ideal |
-| Kebocoran Klik | Klik Meta vs Shopee, % masuk, biaya terbuang |
-| Harian | Komisi vs biaya, ROAS harian, klik & konversi |
-| Perkembangan | Tren antar snapshot manual |
-| **Data Tersimpan** | Tren dari data tersimpan, menumpuk lintas periode |
-| **Unggahan** | Jejak audit tiap file: baru, diperbarui, dilewati |
-| Peluang | Kandidat iklan dari tag organik, konsentrasi anggaran |
-| Rincian | Platform, kategori, jam terbaik, produk, toko |
-| Matching | Nama iklan ke tag beserta keyakinan |
-
-Dua tab bertanda tebal adalah tambahan; delapan sisanya identik dengan dashboard.
-
-## Angka harus cocok dengan dashboard
-
-Penyimpanan dan layar keputusan dihitung dari sumber berbeda — IndexedDB vs `engine.js`.
-Uji mengunci keduanya agar tidak menyimpang, termasuk PPN 11% dan bobot komisi tertunda 0,95.
-
-Uji ini pernah menangkap dua penyimpangan nyata: store menghitung 8.007 order sementara
-engine 8.004 karena belum mengecualikan `Belum Dibayar`, dan riwayat menampilkan ROAS 1,96
-sementara KPI 1,95 karena memakai komisi mentah.
-
-## Struktur
-
-```
-index.html        halaman utama
-styles.css        tema dasar (terang + gelap)
-styles-daily.css  tambahan untuk kartu akun dan rencana simpan
-engine.js         mesin keputusan, tanpa DOM — bisa diuji di Node
-app.js            UI dashboard
-daily-agg.js      agregasi + dedup, murni
-daily-store.js    IndexedDB: akun, data harian, log upload
-daily-layer.js    lapisan akun + penyimpanan di atas dashboard
-```
-
-`daily-layer.js` dimuat setelah `app.js` dan hanya menambah, tidak menggantikan —
-sehingga seluruh metrik dashboard tetap utuh.
-
-## Menjalankan uji
+Gunakan Python 3 dan browser modern yang mendukung IndexedDB. Untuk checkout baru:
 
 ```bash
-npm test                                    # agregasi + mesin keputusan
-python3 -m http.server 8899                 # lalu di terminal lain:
-node e2e.test.js                            # end-to-end di Chrome
+git clone https://github.com/adrianleoh1992/affiliate-harian.git
+cd affiliate-harian
+python3 -m http.server 8899
 ```
 
-Uji end-to-end memerlukan Playwright dan mengambil CSV dari `~/Downloads`.
+Buka [http://localhost:8899/index.html](http://localhost:8899/index.html).
+`index.html` adalah entrypoint; aplikasi statis ini tidak memerlukan build atau
+`npm install`. Jika Node/npm tersedia, `npm run serve` menjalankan server yang sama.
+Gunakan host dan port yang sama pada kunjungan berikutnya agar penyimpanan browser
+berasal dari origin yang sama. Halaman memuat library dan font dari CDN, jadi
+pemuatan pertama membutuhkan koneksi internet.
 
-## Hasil uji
+1. Buat atau pilih **Akun Shopee** dan **Akun Iklan** di kartu Akun.
+2. Unggah CSV **Affiliate Commission Report**, **Meta Ads Report**, dan
+   **Website Click Report** milik akun yang dipilih.
+3. Periksa **Rencana simpan**, termasuk akun, periode, baris baru, dan duplikat.
+4. Tekan **Simpan ke Riwayat** untuk menulis data harian. Unggah saja belum menyimpan
+   data harian; **Simpan Snapshot** adalah tindakan terpisah untuk hasil analisis.
+5. Pilih **Analisis Semua Data Tersimpan** untuk memakai riwayat tanpa mengunggah
+   ulang CSV lama. Atur periode dan PPN sesuai sumber data Anda.
 
+Pemilihan akun dilakukan pengguna; jangan menganggap aplikasi selalu dapat
+menentukan akun pemilik dari CSV. `Nama Toko` pada laporan affiliate adalah toko
+penjual, bukan identitas akun Shopee Anda.
+
+## Contoh tugas
+
+- “Periksa tren akun Shopee ini dari seluruh data tersimpan selama 30 hari dan
+  jelaskan tag yang perlu ditinjau sebelum mengubah anggaran.”
+- “Bandingkan klik Meta dengan klik Shopee pada periode yang sama, lalu periksa
+  kecocokan nama iklan dan tag yang lemah.”
+- “Simpan laporan periode terbaru setelah memeriksa rencana simpan, lalu kirim akun
+  aktif ke workspace tim yang sudah dikonfigurasi.”
+- “Perbaiki dokumentasi alur Cloud tanpa mengubah skema, kredensial, atau data tim.”
+
+Aplikasi menyediakan analisis dan ekspor; aplikasi tidak menjalankan perubahan
+anggaran iklan dari contoh tugas tersebut.
+
+## Hasil dan penyimpanan
+
+| Hasil | Tempat / format |
+|---|---|
+| Keputusan, per ad unit, kebocoran klik, harian, perkembangan, peluang, rincian, matching | Tab analisis browser |
+| Data Tersimpan dan Unggahan | Agregat harian serta log di IndexedDB, terpisah per akun |
+| Cloud | Panel workspace, login, dan pengiriman/pengambilan manual |
+| **Export CSV** | `keputusan-…csv`, hasil keputusan per tag |
+| **Ekspor Akun** | `harian-…json`, akun, agregat, dan log unggahan |
+| Ekspor/impor pada Riwayat | `riwayat-…json`, snapshot analisis |
+
+Ada **11 tab**, termasuk Cloud. Data harian menyimpan agregat, bukan arsip seluruh
+transaksi mentah. Detail produk/toko dan analisis yang memerlukan baris mentah tidak
+selalu dapat direkonstruksi dari agregat.
+
+Ekspor akun pada `main` tidak menyertakan seluruh hash baris dan belum memiliki UI
+restore data harian. Jangan menyamakannya dengan backup/restore lengkap atau dengan
+impor snapshot. Simpan CSV sumber secara aman di luar repo; menghapus data situs
+atau mengganti profil browser dapat menghilangkan salinan lokal.
+
+### Dedup dan rencana simpan
+
+[daily-agg.js](daily-agg.js) dan [daily-store.js](daily-store.js) menangani hash file,
+hash seluruh baris, kunci harian per akun, dan log unggahan. Hash seluruh baris
+membedakan baris transaksi yang sah meskipun sebagian kolomnya sama. Rencana simpan
+membantu meninjau perubahan sebelum penulisan. Ketepatan akun, periode, dan format
+laporan tetap perlu diperiksa pengguna.
+
+## Sinkronisasi tim dan privasi
+
+Lihat [SUPABASE.md](SUPABASE.md) untuk konfigurasi dan operasi tim.
+`main` menyertakan konfigurasi project publik di `supabase-defaults.js`; karena itu
+panel Cloud dapat langsung menampilkan login email. Konfigurasi browser yang sudah
+tersimpan mengambil prioritas atas konfigurasi bawaan. Akses data tetap bergantung
+pada login, keanggotaan workspace, dan kebijakan RLS yang terpasang di database.
+
+Pengiriman melalui **Kirim Akun Aktif ke Cloud** dan pengambilan melalui **Ambil**
+dilakukan manual. Notifikasi realtime hanya memberi tahu ada pembaruan. Pembacaan
+analisis memakai IndexedDB lokal sehingga tidak memerlukan Supabase pada setiap
+perhitungan; ini tidak berarti aplikasi dijamin bisa dimuat sepenuhnya offline.
+
+CSV diproses di browser. Sinkronisasi mengirim agregat **beserta metadata**: nama
+akun, tag/nama ad unit, rincian sumber/wilayah klik, nama file unggahan, log unggahan,
+dan hash dedup. Payload sinkronisasi tidak mengirim seluruh baris CSV mentah.
+Login juga mengirim email ke Supabase. CDN menerima permintaan library/font, dan SDK
+Supabase dimuat saat Cloud digunakan atau sesi login dipulihkan. Jadi klaim “tidak
+ada data yang dikirim ke mana pun” tidak berlaku untuk aplikasi ini.
+
+Jangan memasukkan CSV klien, hasil ekspor, token sesi, password database, atau
+`service_role` key ke repo, issue, atau PR. Anon key adalah konfigurasi klien publik;
+keamanan akses harus diuji pada RLS, bukan diasumsikan dari keberadaan key tersebut.
+
+## Peta file dan sumber acuan
+
+| File | Tanggung jawab |
+|---|---|
+| [index.html](index.html), [styles.css](styles.css), [styles-daily.css](styles-daily.css) | Entrypoint dan tampilan |
+| [engine.js](engine.js), [app.js](app.js) | Analisis dan UI hasil/snapshot/ekspor CSV |
+| [daily-agg.js](daily-agg.js), [daily-store.js](daily-store.js) | Agregasi, dedup, IndexedDB |
+| [daily-layer.js](daily-layer.js) | Akun, rencana simpan, data harian, ekspor akun |
+| [source-layer.js](source-layer.js), [range-presets.js](range-presets.js) | Sumber analisis, PPN per akun, periode cepat |
+| [cloud-sync.js](cloud-sync.js), [cloud-ui.js](cloud-ui.js) | Supabase dan panel Cloud |
+| [supabase-schema.sql](supabase-schema.sql), [sql-test](sql-test) | Skema, kebijakan akses, uji isolasi |
+| [package.json](package.json), [AGENTS.md](AGENTS.md) | Perintah proyek dan panduan kontributor/agen |
+
+Sumber kanonis aplikasi ini adalah
+[adrianleoh1992/affiliate-harian](https://github.com/adrianleoh1992/affiliate-harian).
+Gunakan isi branch/commit yang benar-benar dipakai; PR yang belum digabung bukan
+bagian dari `main`. Kemiripan nama file dengan Dashboard tidak menjamin keduanya
+saling menggantikan atau memakai format backup yang kompatibel.
+
+## Pengujian
+
+Uji mesin dengan fixture sintetis, tanpa data klien atau dependensi npm tambahan:
+
+```bash
+node engine.test.js
+git diff --check
 ```
-tidak menulis sebelum disetujui   0 baris
-dashboard lengkap                 10 tab · 8 KPI · 13 kolom · 4 kartu aksi
-store cocok dengan engine         ROAS 1,95 = 1,95
-unggah ulang                      tidak menggandakan, Rp31.028.615 tetap
-riwayat tersimpan                 30 hari, semua chart ter-render
-isolasi akun                      dua akun terpisah penuh
-persistensi                       bertahan setelah reload
-mobile 390px                      tanpa overflow, target sentuh 44px
-console error                     0
-```
 
-## Sinkronisasi tim (opsional)
+Kedua perintah diverifikasi pada checkout dokumentasi ini. Uji lain yang tersedia:
 
-Secara bawaan data tersimpan hanya di browser masing-masing. Untuk berbagi dengan tim
-dan membuka di perangkat lain, hubungkan ke Supabase — panduan lengkap di
-[SUPABASE.md](SUPABASE.md).
+| Perintah | Prasyarat / cakupan |
+|---|---|
+| `npm test` | Menjalankan `daily-agg.test.js` lalu `engine.test.js`; uji agregasi memakai tiga CSV privat di path absolut dalam file uji |
+| `node klik-tag.test.js` | Normalisasi tag; bagian CSV asli dilewati jika fixture tidak tersedia. Mendukung `CSV_DIR`, `AFF_CSV`, `CLK_CSV`, `ADS_CSV` |
+| `node rehydrate.test.js` / `node ppn.test.js` | Tiga CSV yang ditentukan file uji di `~/Downloads` |
+| `node e2e.test.js` | Server lokal, Playwright, Chrome, dan tiga CSV yang ditentukan file uji |
+| `node source-ppn.test.js` / `node range-presets.test.js` | Prasyarat browser/CSV yang sama |
+| `node cloud-live.test.js` | Playwright, Chrome, server lokal, CDN dan project Supabase aktif; menghubungi layanan nyata |
+| `bash sql-test/run.sh` | PostgreSQL lokal (`initdb`, `pg_ctl`, `psql`); membuat/menghapus cluster sementara `/tmp/pgtest-aharian`, memakai port `55432` |
 
-Model **workspace**: data milik organisasi, bukan per orang. Anggota workspace yang
-sama melihat data yang sama, dengan peran `owner` / `editor` / `viewer`. Row Level
-Security di database yang menegakkan batas itu, bukan kode frontend — jadi bug di UI
-tidak bisa membocorkan data ke workspace lain.
-
-Hash file dan hash baris ikut tersinkron. Tanpa itu, rekan tim yang mengunggah file
-yang sama di perangkat lain akan dianggap mengunggah file baru, dan komisi akan
-menggandakan.
-
-IndexedDB tetap sumber kebenaran untuk membaca, jadi aplikasi tetap cepat dan tetap
-bisa dipakai saat Supabase tidak tersedia.
-
-> **Catatan free tier:** project Supabase gratis berhenti otomatis setelah 7 hari
-> tanpa aktivitas, dan tidak punya backup. Workflow `.github/workflows/keepalive.yml`
-> mengatasi yang pertama; untuk yang kedua, Pro ($25/bulan) memberi backup harian.
-
-## Privasi
-
-Yang dikirim ke cloud hanya **agregat harian**: tanggal, tag, komisi, jumlah pesanan,
-biaya iklan. Nomor pesanan, nama produk, nama toko, dan seluruh baris CSV mentah tidak
-pernah meninggalkan browser.
-
-Tanpa Supabase, tidak ada apa pun yang keluar dari perangkat: tidak ada backend, tidak
-ada analytics. Semua di IndexedDB, bisa diekspor ke JSON kapan saja.
-
-File CSV dan kredensial di-ignore oleh git supaya data klien tidak ikut ter-commit.
+Uji browser mendukung `URL` dan `CHROME`; uji browser dengan CSV mendukung `CSV_DIR`
+(dengan `/` di akhir). Playwright tidak dideklarasikan dalam `package.json`.
+`npm test` bukan smoke test mandiri untuk checkout baru, dan tidak ada script
+`build` atau `lint`. Jangan mengunggah fixture privat agar uji bisa dijalankan;
+catat uji yang dilewati beserta prasyaratnya. Hasil historis dari dataset lain bukan
+bukti semua uji lulus pada checkout saat ini.
 
 ---
 
