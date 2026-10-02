@@ -1,10 +1,16 @@
 # Menghubungkan ke Supabase
 
-Panduan untuk tim Berlima: data dibagi dalam **workspace**, anggota melihat update
-yang sama. Aplikasi tetap berjalan penuh tanpa langkah ini — cloud adalah tambahan,
-bukan syarat.
+Panduan untuk tim Berlima: data dibagi dalam **workspace**. Sinkronisasi memakai
+pengiriman dan pengambilan manual; notifikasi realtime tidak mengambil data secara
+otomatis. Analisis memakai IndexedDB lokal. Lihat [README.md](README.md) untuk
+quickstart dan kebutuhan CDN saat memuat aplikasi.
 
-Waktu yang dibutuhkan: sekitar 20 menit, sekali saja.
+Pada `main` yang diperiksa (`f0a6104`, 2 Oktober 2026),
+[supabase-defaults.js](supabase-defaults.js) sudah memuat URL project dan anon key
+publik. Pengguna project bawaan dapat mulai dari login pada langkah 5; langkah 1–4
+untuk pengelola yang menyiapkan project sendiri. Keberadaan konfigurasi di repo
+bukan bukti project cloud sedang aktif atau skema produksinya sudah sesuai.
+Konfigurasi browser yang tersimpan mengambil prioritas atas bawaan repo.
 
 ---
 
@@ -54,18 +60,28 @@ masuk akan menolak mengarahkan kembali ke aplikasi.
 
 ## 5. Hubungkan aplikasi
 
-1. Buka aplikasi → tab **Cloud**
-2. Masukkan Project URL dan anon key → **Simpan Koneksi**
-3. Masukkan email → **Kirim Link Masuk**
-4. Buka email, klik link, kembali ke aplikasi
-5. **Buat workspace** — misalnya `Berlima Digital`
+1. Buka aplikasi → tab **Cloud**. Pada checkout dengan konfigurasi bawaan,
+   panel langsung menampilkan login email.
+2. Bila tidak ada konfigurasi efektif, panel menampilkan Project URL dan anon key
+   → **Simpan Koneksi**. Bila sudah dikonfigurasi, langkah ini tidak muncul.
+3. Masukkan email → **Kirim Link Masuk**.
+4. Buka email, klik link, kembali ke aplikasi.
+5. **Buat workspace** atau gabung ke workspace yang disiapkan tim.
+
+Untuk deployment dengan project sendiri, pengelola perlu memastikan konfigurasi
+klien menunjuk ke project yang dimaksud. `CloudSync.cfg()` memakai nilai browser
+lebih dahulu, lalu `supabase-defaults.js`. Menghapus konfigurasi browser kembali
+memakai bawaan; tombol **Ganti Koneksi** belum menjadi jaminan pemilih project
+kosong pada checkout yang memiliki defaults. Jangan memasukkan `service_role`,
+password database, atau token akses ke konfigurasi klien.
 
 ## 6. Undang tim
 
 Setelah workspace dibuat, kode undangan muncul di tab Cloud. Bagikan ke rekan.
 
-Mereka: buka aplikasi → tab Cloud → masukkan URL dan anon key yang sama → masuk
-dengan email masing-masing → tempel kode undangan → **Gabung**.
+Mereka: buka aplikasi → tab Cloud → pastikan project yang dipakai sama → masuk
+dengan email masing-masing → tempel kode undangan → **Gabung**. Pada konfigurasi
+bawaan, input URL/key tidak diperlukan.
 
 ### Peran
 
@@ -94,8 +110,9 @@ where workspace_id = '<id-workspace>'
 **Ambil** — di perangkat atau akun lain, tab Cloud → **Ambil** pada akun yang
 diinginkan.
 
-IndexedDB tetap sumber kebenaran untuk membaca, jadi aplikasi tetap cepat dan bisa
-dipakai offline. Cloud adalah salinan bersama.
+Pembacaan analisis memakai IndexedDB lokal; Cloud adalah salinan bersama. Kegagalan
+Supabase tidak menghapus salinan lokal. Pemuatan aplikasi tetap memakai library/font
+dari CDN, sehingga ini bukan jaminan dukungan offline penuh.
 
 ### Dedup ikut tersinkron
 
@@ -105,68 +122,38 @@ menggandakan — persis masalah yang membuat proyek ini dibangun.
 
 ---
 
-## Auto-pause: yang harus Anda tahu
+## Ketersediaan dan backup
 
-Project Supabase gratis **berhenti otomatis setelah 7 hari tanpa aktivitas**. Kalau
-itu terjadi, aplikasi tidak bisa terhubung sampai Anda menekan **Restore** di
-dashboard Supabase.
+Periksa [harga dan batas paket Supabase](https://supabase.com/pricing) serta
+[panduan backup database](https://supabase.com/docs/guides/platform/backups) saat
+menyiapkan project. Saat tautan diperiksa pada 2 Oktober 2026, paket Free mencantumkan
+pause setelah satu minggu tanpa aktivitas dan tidak menyertakan backup otomatis.
+Pilih rencana pemulihan sesuai kebutuhan data tim; sinkronisasi bukan pengganti
+backup yang diuji.
 
-Data tidak hilang, hanya tertidur. Tapi kalau ini mengganggu, ada dua jalan:
+Repo sudah memiliki [.github/workflows/keepalive.yml](.github/workflows/keepalive.yml)
+untuk ping terjadwal, dengan `SUPABASE_URL` dan `SUPABASE_ANON_KEY` dari GitHub Actions
+secrets. Ini bukan backup, uji login, atau jaminan layanan selalu tersedia. Perubahan
+dokumentasi tidak mengaktifkan workflow, mengatur secrets, atau mengubah project.
 
-**A. Ping otomatis lewat GitHub Actions** (gratis)
-
-Buat `.github/workflows/keepalive.yml`:
-
-```yaml
-name: Keep Supabase Alive
-on:
-  schedule:
-    - cron: '0 2 * * 1,4'   # Senin & Kamis
-  workflow_dispatch:
-jobs:
-  ping:
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          curl -sS "${{ secrets.SUPABASE_URL }}/rest/v1/workspaces?limit=1" \
-            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
-```
-
-Lalu tambahkan `SUPABASE_URL` dan `SUPABASE_ANON_KEY` di
-**Settings → Secrets and variables → Actions**.
-
-**B. Upgrade ke Pro** ($25/bulan) — pausing hilang sepenuhnya, plus backup harian.
-
-Untuk data operasional yang dipakai mengambil keputusan belanja iklan, backup harian
-itu alasan yang lebih kuat daripada auto-pause. Free tier **tidak punya backup sama
-sekali**.
-
----
-
-## Batas free tier
-
-| | Free |
-|---|---|
-| Database | 500 MB |
-| Egress | 5 GB/bulan |
-| Pengguna aktif | 50.000/bulan |
-| Project aktif | 2 |
-| Backup | **tidak ada** |
-| Auto-pause | 7 hari |
-
-Data agregat harian sekitar **1,4 MB per akun per tahun**, jadi 500 MB muat ratusan
-akun-tahun. Yang akan Anda tabrak lebih dulu adalah auto-pause, bukan kapasitas.
+Ekspor **Akun** di aplikasi hanya mencakup akun, agregat, dan log unggahan. Ekspor ini
+belum menyertakan seluruh hash baris atau UI restore data harian. Simpan laporan
+sumber dan siapkan backup database yang sesuai sebelum mengandalkan pemulihan.
 
 ---
 
 ## Privasi
 
-Yang dikirim ke Supabase hanya **agregat harian**: tanggal, tag, komisi, jumlah
-pesanan, biaya iklan.
+Payload [cloud-sync.js](cloud-sync.js) mencakup agregat harian serta metadata:
+nama akun, tag/nama ad unit, rincian wilayah/sumber klik, nama file dan log unggahan,
+dan hash dedup. Pengiriman CSV mentah lengkap tidak menjadi bagian dari payload
+sinkronisasi. Nama akun, tag, iklan, dan file tetap dapat mengandung informasi
+bisnis; tinjau sebelum dikirim ke workspace.
 
-Yang **tidak pernah** dikirim: nomor pesanan, nama produk, nama toko, dan seluruh
-baris CSV mentah. Semua itu diproses di browser lalu dilupakan.
+Login mengirim email ke Supabase dan menyimpan sesi di browser. SDK Supabase dimuat
+saat panel Cloud digunakan atau sesi dipulihkan; library/font aplikasi juga dimuat
+dari CDN. Karena itu, jangan mengartikan pemrosesan CSV lokal sebagai nol permintaan
+jaringan. Jangan commit CSV, ekspor JSON, token sesi, atau kredensial privat.
 
 ---
 
